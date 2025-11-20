@@ -117,101 +117,337 @@
         ],
       },
     ];
+    
+// ---- HELPERS (paragraph-style output) ----
+function ensureSentence(text) {
+  if (!text) return "";
+  let t = String(text).trim();
+  if (!t) return "";
+  const last = t[t.length - 1];
+  if (!".!?".includes(last)) t += ".";
+  return t;
+}
 
-    // ---- HELPERS ----
-    function line(label, value) {
-      if (!value || !String(value).trim()) return "";
-      return `${label}: ${value}\n`;
-    }
+function buildNote(global, typeConfig, specific) {
+  const dateStr = global.noteDate || new Date().toLocaleDateString();
+  const timeStr = global.noteTime ? ` at ${global.noteTime}` : "";
+  const staffPart = global.staffName
+    ? `${global.staffName}${global.staffRole ? `, ${global.staffRole}` : ""}`
+    : "staff";
+  const participantPart = global.participantName
+    ? `${global.participantName}${global.sid ? ` (SID ${global.sid})` : ""}`
+    : "the participant";
+  const contactType = (global.contactType || "contact").toLowerCase();
+  const locationPart = global.location ? ` at ${global.location}` : "";
+  const fundingPart = global.fundingStream
+    ? ` under WIOA Youth (${global.fundingStream})`
+    : " under WIOA Youth.";
 
-    function paragraph(label, value) {
-      if (!value || !String(value).trim()) return "";
-      return `${label}: ${value}\n\n`;
-    }
+  // Intro sentence (who/when/where/why program)
+  let intro =
+    `On ${dateStr}${timeStr}, ${staffPart} had a ${contactType} with ${participantPart}` +
+    `${locationPart}${fundingPart}`;
 
-    function buildNote(global, typeConfig, specific) {
-      const date = global.noteDate || new Date().toLocaleDateString();
-      const time = global.noteTime || "";
-      const header =
-        `DATE: ${date}${time ? " " + time : ""} | STAFF: ${global.staffName || ""} (${global.staffRole || ""})\n` +
-        `PROGRAM: WIOA Youth${global.fundingStream ? " - " + global.fundingStream : ""}\n` +
-        line("PARTICIPANT", `${global.participantName || ""}${global.sid ? " | SID: " + global.sid : ""}`) +
-        line("CONTACT TYPE", global.contactType || "") +
-        line("LOCATION", global.location || "") +
-        "\n";
+  intro = ensureSentence(intro);
 
-      let body = `NOTE TYPE: ${typeConfig.label}\n\n`;
+  const segments = [];
 
-      switch (typeConfig.id) {
-        case "intake":
-          body += paragraph("Reason for contact", specific.primaryReason);
-          body += paragraph("Eligibility factors discussed", specific.eligibilityDiscussed);
-          body += paragraph("Documents collected / reviewed", specific.documentsCollected);
-          body += paragraph("Orientation topics covered", specific.topicsCovered);
-          body += paragraph("Youth engagement / motivation", specific.participantEngagement);
-          body += paragraph("Next steps / appointments", specific.nextSteps);
-          break;
-
-        case "assessment":
-          body += paragraph("Assessments completed", specific.assessmentsCompleted);
-          body += paragraph("Strengths identified", specific.keyStrengths);
-          body += paragraph("Barriers identified", specific.keyBarriers);
-          body += paragraph("ISS goals added/updated", specific.issGoals);
-          body += paragraph("Youth choice and voice", specific.youthVoice);
-          body += paragraph("Timeframes / milestones", specific.timeframes);
-          break;
-
-        case "service":
-          body += paragraph("Service type", specific.serviceType);
-          body += paragraph("Service details / activities completed", specific.serviceDetails);
-          body += paragraph("Youth participation and response", specific.participantResponse);
-          body += paragraph("Immediate outcomes", specific.outcomes);
-          body += paragraph("Link to ISS goals", specific.alignmentISS);
-          body += paragraph("Follow-up actions", specific.followUpActions);
-          break;
-
-        case "supportive":
-          body += paragraph("Barrier addressed", specific.barrierAddressed);
-          body += paragraph("Supportive service provided", specific.supportType);
-          body += paragraph("Amount / period", specific.amount);
-          body += paragraph("Eligibility & justification", specific.justification);
-          body += paragraph("Documentation on file", specific.documentation);
-          body += paragraph("Youth understanding of expectations", specific.participantUnderstanding);
-          break;
-
-        case "followup":
-          body += paragraph("Youth current status (school / work)", specific.statusUpdate);
-          body += paragraph("Stability and performance", specific.stability);
-          body += paragraph("Issues/concerns reported", specific.issuesRaised);
-          body += paragraph("Supports / referrals offered", specific.supportsOffered);
-          body += paragraph("Verification method", specific.verification);
-          body += paragraph("Next contact plan", specific.nextContactPlan);
-          break;
-
-        case "placement":
-          body += paragraph("Placement type", specific.placementType);
-          body += paragraph("Employer / site / position", specific.employerInfo);
-          body += paragraph("Schedule, hours, pay, start date", specific.schedulePay);
-          body += paragraph("How opportunity was obtained", specific.howFound);
-          body += paragraph("Connection to ISS / training", specific.trainingConnection);
-          body += paragraph("Retention and follow-up plan", specific.retentionPlan);
-          break;
-
-        default:
-          // fallback: dump all fields
-          typeConfig.fields.forEach(f => {
-            body += paragraph(f.label, specific[f.key]);
-          });
+  switch (typeConfig.id) {
+    case "intake": {
+      if (specific.primaryReason) {
+        segments.push(
+          ensureSentence(
+            `The primary reason for the contact was ${specific.primaryReason}`
+          )
+        );
       }
-
-      const compliance =
-        "Compliance/Documentation: Case note reflects who, what, when, where, and why of the contact. " +
-        "Associated service codes and funding will be entered in the system consistent with local policy. " +
-        "All required documentation will be retained in the case file.\n";
-
-      return header + body + compliance;
+      if (specific.eligibilityDiscussed) {
+        segments.push(
+          ensureSentence(
+            `Eligibility discussion included ${specific.eligibilityDiscussed}`
+          )
+        );
+      }
+      if (specific.documentsCollected) {
+        segments.push(
+          ensureSentence(
+            `Documents collected or reviewed included ${specific.documentsCollected}`
+          )
+        );
+      }
+      if (specific.topicsCovered) {
+        segments.push(
+          ensureSentence(
+            `Orientation topics covered included ${specific.topicsCovered}`
+          )
+        );
+      }
+      if (specific.participantEngagement) {
+        segments.push(
+          ensureSentence(
+            `The youth’s level of engagement and motivation was described as ${specific.participantEngagement}`
+          )
+        );
+      }
+      if (specific.nextSteps) {
+        segments.push(
+          ensureSentence(
+            `Next steps and follow-up agreed upon were ${specific.nextSteps}`
+          )
+        );
+      }
+      break;
     }
 
+    case "assessment": {
+      if (specific.assessmentsCompleted) {
+        segments.push(
+          ensureSentence(
+            `The following assessments were completed or reviewed: ${specific.assessmentsCompleted}`
+          )
+        );
+      }
+      if (specific.keyStrengths) {
+        segments.push(
+          ensureSentence(
+            `Key strengths identified were ${specific.keyStrengths}`
+          )
+        );
+      }
+      if (specific.keyBarriers) {
+        segments.push(
+          ensureSentence(
+            `Key barriers identified were ${specific.keyBarriers}`
+          )
+        );
+      }
+      if (specific.issGoals) {
+        segments.push(
+          ensureSentence(
+            `ISS goals were added or updated as follows: ${specific.issGoals}`
+          )
+        );
+      }
+      if (specific.youthVoice) {
+        segments.push(
+          ensureSentence(
+            `Youth choice and voice were reflected in the plan by ${specific.youthVoice}`
+          )
+        );
+      }
+      if (specific.timeframes) {
+        segments.push(
+          ensureSentence(
+            `Timeframes and milestones discussed included ${specific.timeframes}`
+          )
+        );
+      }
+      break;
+    }
+
+    case "service": {
+      if (specific.serviceType) {
+        segments.push(
+          ensureSentence(`Service provided was ${specific.serviceType}`)
+        );
+      }
+      if (specific.serviceDetails) {
+        segments.push(
+          ensureSentence(
+            `During the contact, the following activities were completed: ${specific.serviceDetails}`
+          )
+        );
+      }
+      if (specific.participantResponse) {
+        segments.push(
+          ensureSentence(
+            `The youth’s participation and response were described as ${specific.participantResponse}`
+          )
+        );
+      }
+      if (specific.outcomes) {
+        segments.push(
+          ensureSentence(
+            `Immediate outcomes of the contact included ${specific.outcomes}`
+          )
+        );
+      }
+      if (specific.alignmentISS) {
+        segments.push(
+          ensureSentence(
+            `This service supports the ISS by ${specific.alignmentISS}`
+          )
+        );
+      }
+      if (specific.followUpActions) {
+        segments.push(
+          ensureSentence(
+            `Follow-up actions and responsibilities include ${specific.followUpActions}`
+          )
+        );
+      }
+      break;
+    }
+
+    case "supportive": {
+      if (specific.barrierAddressed) {
+        segments.push(
+          ensureSentence(
+            `The supportive service addressed the following barrier: ${specific.barrierAddressed}`
+          )
+        );
+      }
+      if (specific.supportType) {
+        segments.push(
+          ensureSentence(
+            `Supportive service provided or approved was ${specific.supportType}`
+          )
+        );
+      }
+      if (specific.amount) {
+        segments.push(
+          ensureSentence(
+            `The amount or period of support was ${specific.amount}`
+          )
+        );
+      }
+      if (specific.justification) {
+        segments.push(
+          ensureSentence(
+            `Eligibility and justification for the supportive service are documented as follows: ${specific.justification}`
+          )
+        );
+      }
+      if (specific.documentation) {
+        segments.push(
+          ensureSentence(
+            `Documentation on file includes ${specific.documentation}`
+          )
+        );
+      }
+      if (specific.participantUnderstanding) {
+        segments.push(
+          ensureSentence(
+            `The youth’s understanding of limits and expectations related to the supportive service was reviewed as follows: ${specific.participantUnderstanding}`
+          )
+        );
+      }
+      break;
+    }
+
+    case "followup": {
+      if (specific.statusUpdate) {
+        segments.push(
+          ensureSentence(
+            `The youth reported the following current school or work status: ${specific.statusUpdate}`
+          )
+        );
+      }
+      if (specific.stability) {
+        segments.push(
+          ensureSentence(
+            `Stability and performance were described as ${specific.stability}`
+          )
+        );
+      }
+      if (specific.issuesRaised) {
+        segments.push(
+          ensureSentence(
+            `Issues or concerns raised by the youth included ${specific.issuesRaised}`
+          )
+        );
+      }
+      if (specific.supportsOffered) {
+        segments.push(
+          ensureSentence(
+            `Supports, coaching, or referrals offered included ${specific.supportsOffered}`
+          )
+        );
+      }
+      if (specific.verification) {
+        segments.push(
+          ensureSentence(
+            `Status was verified using the following method(s): ${specific.verification}`
+          )
+        );
+      }
+      if (specific.nextContactPlan) {
+        segments.push(
+          ensureSentence(
+            `The plan for next contact is ${specific.nextContactPlan}`
+          )
+        );
+      }
+      break;
+    }
+
+    case "placement": {
+      if (specific.placementType) {
+        segments.push(
+          ensureSentence(
+            `The youth obtained the following placement: ${specific.placementType}`
+          )
+        );
+      }
+      if (specific.employerInfo) {
+        segments.push(
+          ensureSentence(
+            `Employer or site information and position were described as ${specific.employerInfo}`
+          )
+        );
+      }
+      if (specific.schedulePay) {
+        segments.push(
+          ensureSentence(
+            `Schedule, hours, pay, and start date were documented as ${specific.schedulePay}`
+          )
+        );
+      }
+      if (specific.howFound) {
+        segments.push(
+          ensureSentence(
+            `The opportunity was obtained as follows: ${specific.howFound}`
+          )
+        );
+      }
+      if (specific.trainingConnection) {
+        segments.push(
+          ensureSentence(
+            `This placement connects to ISS and training goals by ${specific.trainingConnection}`
+          )
+        );
+      }
+      if (specific.retentionPlan) {
+        segments.push(
+          ensureSentence(
+            `A retention and follow-up plan was discussed as follows: ${specific.retentionPlan}`
+          )
+        );
+      }
+      break;
+    }
+
+    default: {
+      // generic fallback: turn every field into a sentence
+      typeConfig.fields.forEach(f => {
+        const val = specific[f.key];
+        if (!val || !String(val).trim()) return;
+        segments.push(
+          ensureSentence(`${f.label}: ${val}`)
+        );
+      });
+    }
+  }
+
+  const main = segments.filter(Boolean).join(" ");
+
+  const compliance =
+    " This note documents who, what, when, where, why, outcomes, and planned follow-up consistent with local WIOA Youth policy. " +
+    "Associated services and funding will be entered in the case management system according to local documentation requirements.";
+
+  return intro + (main ? " " + main : "") + compliance;
+}
+    
     // ---- COMPONENT ----
     function App() {
       const [selectedTypeId, setSelectedTypeId] = useState("intake");
