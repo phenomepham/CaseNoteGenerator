@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>WIOA Youth Case Note Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Inter font + Tailwind -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind = window.tailwind || {};
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React 18 UMD + ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-950 font-sans text-slate-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    // ---- CONFIG ----
+    const NOTE_TYPES = [
+      {
+        id: "intake",
+        label: "Intake / Orientation",
+        description: "First contact, eligibility discussion, overview of WIOA Youth services.",
+        fields: [
+          { key: "primaryReason", label: "Primary reason for visit / contact", type: "textarea" },
+          { key: "eligibilityDiscussed", label: "Eligibility factors discussed (in-school / out-of-school, barriers, income, etc.)", type: "textarea" },
+          { key: "documentsCollected", label: "Documents collected (ID, SSN, income, school status, selective service, etc.)", type: "textarea" },
+          { key: "topicsCovered", label: "Topics covered in orientation (rights, responsibilities, services, expectations)", type: "textarea" },
+          { key: "participantEngagement", label: "Participant engagement / motivation level", type: "text" },
+          { key: "nextSteps", label: "Next steps agreed upon (appointments, forms, assessments)", type: "textarea" },
+        ],
+      },
+      {
+        id: "assessment",
+        label: "Assessment / ISS Update",
+        description: "Objective assessment, ISS development, goals and barriers.",
+        fields: [
+          { key: "assessmentsCompleted", label: "Assessments completed (academic, career interest, basic skills, etc.)", type: "textarea" },
+          { key: "keyStrengths", label: "Key strengths identified", type: "textarea" },
+          { key: "keyBarriers", label: "Key barriers identified", type: "textarea" },
+          { key: "issGoals", label: "ISS goals added or updated (education, employment, support)", type: "textarea" },
+          { key: "youthVoice", label: "How youth participated in goal setting / choices", type: "textarea" },
+          { key: "timeframes", label: "Timeframes or milestones discussed", type: "textarea" },
+        ],
+      },
+      {
+        id: "service",
+        label: "Service Provided (Career / Training)",
+        description: "Career or training service delivered today.",
+        fields: [
+          { key: "serviceType", label: "Service type (career exploration, resume help, job search, training, etc.)", type: "text" },
+          { key: "serviceDetails", label: "What was done during the service (activities, tools used, employers/training providers discussed)", type: "textarea" },
+          { key: "participantResponse", label: "Participant response / level of participation", type: "textarea" },
+          { key: "outcomes", label: "Immediate outcomes (applications completed, resume updated, training option selected, etc.)", type: "textarea" },
+          { key: "alignmentISS", label: "How the service supports ISS goal(s)", type: "textarea" },
+          { key: "followUpActions", label: "Follow-up actions (for staff and youth)", type: "textarea" },
+        ],
+      },
+      {
+        id: "supportive",
+        label: "Supportive Service",
+        description: "Supportive service provided or approved (transportation, childcare, etc.).",
+        fields: [
+          { key: "barrierAddressed", label: "Barrier addressed (transportation, childcare, housing, etc.)", type: "textarea" },
+          { key: "supportType", label: "Supportive service type (bus pass, gas card, tools, fees, etc.)", type: "text" },
+          { key: "amount", label: "Amount / value and period covered", type: "text" },
+          { key: "justification", label: "Eligibility and justification (how service is necessary for participation)", type: "textarea" },
+          { key: "documentation", label: "Documentation on file (receipts, invoices, policies, approvals)", type: "textarea" },
+          { key: "participantUnderstanding", label: "Youth understanding of supportive service limits and expectations", type: "textarea" },
+        ],
+      },
+      {
+        id: "followup",
+        label: "Follow-Up Contact (Youth)",
+        description: "Ongoing contact after service start / exit to support retention and outcomes.",
+        fields: [
+          { key: "statusUpdate", label: "Current school/work status reported by youth", type: "textarea" },
+          { key: "stability", label: "Stability of situation (hours, schedule, attendance, grades, etc.)", type: "textarea" },
+          { key: "issuesRaised", label: "Any issues or concerns raised by youth", type: "textarea" },
+          { key: "supportsOffered", label: "Supports, coaching, or referrals offered", type: "textarea" },
+          { key: "verification", label: "How status was verified (contact with employer/school, documentation requested, etc.)", type: "textarea" },
+          { key: "nextContactPlan", label: "Plan for next contact (method, timeframe)", type: "textarea" },
+        ],
+      },
+      {
+        id: "placement",
+        label: "Employment / Placement",
+        description: "Youth obtained employment / work-based learning / apprenticeship.",
+        fields: [
+          { key: "placementType", label: "Type of placement (employment, WEX, OJT, apprenticeship, etc.)", type: "text" },
+          { key: "employerInfo", label: "Employer / site name and position title (no PII beyond policy)", type: "textarea" },
+          { key: "schedulePay", label: "Schedule, hours, pay rate, and start date (as allowed by policy)", type: "textarea" },
+          { key: "howFound", label: "How opportunity was obtained (staff assisted, self-directed, referral, etc.)", type: "textarea" },
+          { key: "trainingConnection", label: "Connection to training / ISS goals", type: "textarea" },
+          { key: "retentionPlan", label: "Retention and follow-up plan", type: "textarea" },
+        ],
+      },
+    ];
+
+    // ---- HELPERS ----
+    function line(label, value) {
+      if (!value || !String(value).trim()) return "";
+      return `${label}: ${value}\n`;
+    }
+
+    function paragraph(label, value) {
+      if (!value || !String(value).trim()) return "";
+      return `${label}: ${value}\n\n`;
+    }
+
+    function buildNote(global, typeConfig, specific) {
+      const date = global.noteDate || new Date().toLocaleDateString();
+      const time = global.noteTime || "";
+      const header =
+        `DATE: ${date}${time ? " " + time : ""} | STAFF: ${global.staffName || ""} (${global.staffRole || ""})\n` +
+        `PROGRAM: WIOA Youth${global.fundingStream ? " - " + global.fundingStream : ""}\n` +
+        line("PARTICIPANT", `${global.participantName || ""}${global.sid ? " | SID: " + global.sid : ""}`) +
+        line("CONTACT TYPE", global.contactType || "") +
+        line("LOCATION", global.location || "") +
+        "\n";
+
+      let body = `NOTE TYPE: ${typeConfig.label}\n\n`;
+
+      switch (typeConfig.id) {
+        case "intake":
+          body += paragraph("Reason for contact", specific.primaryReason);
+          body += paragraph("Eligibility factors discussed", specific.eligibilityDiscussed);
+          body += paragraph("Documents collected / reviewed", specific.documentsCollected);
+          body += paragraph("Orientation topics covered", specific.topicsCovered);
+          body += paragraph("Youth engagement / motivation", specific.participantEngagement);
+          body += paragraph("Next steps / appointments", specific.nextSteps);
+          break;
+
+        case "assessment":
+          body += paragraph("Assessments completed", specific.assessmentsCompleted);
+          body += paragraph("Strengths identified", specific.keyStrengths);
+          body += paragraph("Barriers identified", specific.keyBarriers);
+          body += paragraph("ISS goals added/updated", specific.issGoals);
+          body += paragraph("Youth choice and voice", specific.youthVoice);
+          body += paragraph("Timeframes / milestones", specific.timeframes);
+          break;
+
+        case "service":
+          body += paragraph("Service type", specific.serviceType);
+          body += paragraph("Service details / activities completed", specific.serviceDetails);
+          body += paragraph("Youth participation and response", specific.participantResponse);
+          body += paragraph("Immediate outcomes", specific.outcomes);
+          body += paragraph("Link to ISS goals", specific.alignmentISS);
+          body += paragraph("Follow-up actions", specific.followUpActions);
+          break;
+
+        case "supportive":
+          body += paragraph("Barrier addressed", specific.barrierAddressed);
+          body += paragraph("Supportive service provided", specific.supportType);
+          body += paragraph("Amount / period", specific.amount);
+          body += paragraph("Eligibility & justification", specific.justification);
+          body += paragraph("Documentation on file", specific.documentation);
+          body += paragraph("Youth understanding of expectations", specific.participantUnderstanding);
+          break;
+
+        case "followup":
+          body += paragraph("Youth current status (school / work)", specific.statusUpdate);
+          body += paragraph("Stability and performance", specific.stability);
+          body += paragraph("Issues/concerns reported", specific.issuesRaised);
+          body += paragraph("Supports / referrals offered", specific.supportsOffered);
+          body += paragraph("Verification method", specific.verification);
+          body += paragraph("Next contact plan", specific.nextContactPlan);
+          break;
+
+        case "placement":
+          body += paragraph("Placement type", specific.placementType);
+          body += paragraph("Employer / site / position", specific.employerInfo);
+          body += paragraph("Schedule, hours, pay, start date", specific.schedulePay);
+          body += paragraph("How opportunity was obtained", specific.howFound);
+          body += paragraph("Connection to ISS / training", specific.trainingConnection);
+          body += paragraph("Retention and follow-up plan", specific.retentionPlan);
+          break;
+
+        default:
+          // fallback: dump all fields
+          typeConfig.fields.forEach(f => {
+            body += paragraph(f.label, specific[f.key]);
+          });
+      }
+
+      const compliance =
+        "Compliance/Documentation: Case note reflects who, what, when, where, and why of the contact. " +
+        "Associated service codes and funding will be entered in the system consistent with local policy. " +
+        "All required documentation will be retained in the case file.\n";
+
+      return header + body + compliance;
+    }
+
+    // ---- COMPONENT ----
+    function App() {
+      const [selectedTypeId, setSelectedTypeId] = useState("intake");
+
+      const [global, setGlobal] = useState({
+        participantName: "",
+        sid: "",
+        staffName: "",
+        staffRole: "",
+        fundingStream: "Youth (ISY/OSY)",
+        noteDate: new Date().toISOString().slice(0, 10),
+        noteTime: "",
+        contactType: "In person",
+        location: "",
+      });
+
+      const [typeAnswers, setTypeAnswers] = useState({});
+      const [noteText, setNoteText] = useState("");
+      const [error, setError] = useState("");
+
+      const selectedType = NOTE_TYPES.find(t => t.id === selectedTypeId) || NOTE_TYPES[0];
+      const answersForType = typeAnswers[selectedType.id] || {};
+
+      function updateGlobal(field, value) {
+        setGlobal(prev => ({ ...prev, [field]: value }));
+      }
+
+      function updateTypeAnswer(typeId, key, value) {
+        setTypeAnswers(prev => ({
+          ...prev,
+          [typeId]: { ...(prev[typeId] || {}), [key]: value },
+        }));
+      }
+
+      function handleGenerate() {
+        setError("");
+        const missing = [];
+        if (!global.participantName.trim()) missing.push("Participant name");
+        if (!global.staffName.trim()) missing.push("Staff name");
+        if (!global.noteDate.trim()) missing.push("Note date");
+
+        if (missing.length) {
+          setError("Please complete: " + missing.join(", ") + ".");
+          return;
+        }
+
+        const note = buildNote(global, selectedType, answersForType);
+        setNoteText(note);
+      }
+
+      function handleCopy() {
+        if (!noteText.trim()) {
+          setError("Generate a case note before copying.");
+          return;
+        }
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(noteText)
+            .then(() => setError("Note copied to clipboard. Paste into NEworks."))
+            .catch(() => setError("Unable to copy automatically. Select the text and copy."));
+        } else {
+          setError("Clipboard not supported. Select the text and copy.");
+        }
+      }
+
+      return (
+        <div className="min-h-screen px-3 py-4 md:px-6 md:py-6">
+          <div className="max-w-6xl mx-auto bg-slate-900/80 border border-slate-800 rounded-3xl shadow-2xl p-4 md:p-6 lg:p-8">
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <div>
+                <div className="inline-flex items-center gap-2 mb-1">
+                  <span className="inline-flex items-center rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                    WIOA Youth
+                  </span>
+                  <span className="text-[11px] text-slate-400">Case Note Generator</span>
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">Audit-Ready Case Notes</h1>
+                <p className="text-sm text-slate-400 mt-1">
+                  Select a case note type, answer guided prompts, then copy the generated note into NEworks.
+                </p>
+              </div>
+              <div className="text-xs text-slate-400 text-right max-w-xs">
+                Designed to capture who, what, when, where, why, outcomes, and follow-up for Youth WIOA.
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Left: inputs */}
+              <div className="space-y-4">
+                <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 space-y-3">
+                  <div className="text-xs font-semibold text-slate-200 tracking-wide uppercase mb-1">
+                    Global Fields
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">Participant name</label>
+                      <input
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        value={global.participantName}
+                        onChange={e => updateGlobal("participantName", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">SID / ID</label>
+                      <input
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        value={global.sid}
+                        onChange={e => updateGlobal("sid", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">Staff name</label>
+                      <input
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        value={global.staffName}
+                        onChange={e => updateGlobal("staffName", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">Staff role/title</label>
+                      <input
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        value={global.staffRole}
+                        onChange={e => updateGlobal("staffRole", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">Note date</label>
+                      <input
+                        type="date"
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        value={global.noteDate}
+                        onChange={e => updateGlobal("noteDate", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">Time (optional)</label>
+                      <input
+                        type="time"
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        value={global.noteTime}
+                        onChange={e => updateGlobal("noteTime", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">Contact type</label>
+                      <select
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        value={global.contactType}
+                        onChange={e => updateGlobal("contactType", e.target.value)}
+                      >
+                        <option>In person</option>
+                        <option>Phone</option>
+                        <option>Virtual / online</option>
+                        <option>Email / text</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">Location</label>
+                      <input
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        placeholder="e.g., One-Stop, school, employer site"
+                        value={global.location}
+                        onChange={e => updateGlobal("location", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-[11px] font-semibold text-slate-300 uppercase">Funding stream / enrollment</label>
+                      <input
+                        className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                        value={global.fundingStream}
+                        onChange={e => updateGlobal("fundingStream", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-200 uppercase tracking-wide">
+                        Case Note Type
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Different note types ask different questions to cover audit requirements.
+                      </p>
+                    </div>
+                  </div>
+                  <select
+                    className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                    value={selectedTypeId}
+                    onChange={e => setSelectedTypeId(e.target.value)}
+                  >
+                    {NOTE_TYPES.map(t => (
+                      <option key={t.id} value={t.id}>{t.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-400">
+                    {selectedType.description}
+                  </p>
+
+                  <div className="mt-2 space-y-3 max-h-80 overflow-auto pr-1">
+                    {selectedType.fields.map(field => (
+                      <div key={field.key} className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-slate-300 uppercase">
+                          {field.label}
+                        </label>
+                        {field.type === "textarea" ? (
+                          <textarea
+                            rows="3"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                            value={answersForType[field.key] || ""}
+                            onChange={e => updateTypeAnswer(selectedType.id, field.key, e.target.value)}
+                          ></textarea>
+                        ) : (
+                          <input
+                            className="w-full h-9 px-3 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                            value={answersForType[field.key] || ""}
+                            onChange={e => updateTypeAnswer(selectedType.id, field.key, e.target.value)}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/40 rounded-lg px-3 py-2">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleGenerate}
+                    className="flex-1 px-3 py-2 text-sm rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold shadow-sm transition-colors"
+                  >
+                    Generate Case Note
+                  </button>
+                  <button
+                    onClick={handleCopy}
+                    className="px-3 py-2 text-sm rounded-full border border-slate-600 bg-slate-900 hover:bg-slate-800 text-slate-100 transition-colors"
+                  >
+                    Copy to Clipboard
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: output */}
+              <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <div className="text-xs font-semibold text-slate-200 uppercase tracking-wide">
+                      Generated Case Note
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Review before pasting into NEworks. Edit text if needed to match local policy.
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-slate-500">
+                    Includes who, what, when, where, why, outcomes, and follow-up.
+                  </span>
+                </div>
+                <textarea
+                  className="flex-1 w-full mt-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  placeholder="Generated case note will appear here after you click “Generate Case Note”."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
