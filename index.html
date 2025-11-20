@@ -121,13 +121,13 @@
 // ---- HELPERS (paragraph-style output) ----
 function ensureSentence(text) {
   if (!text) return "";
-  let t = String(text).trim();
+  // Turn any runs of whitespace (spaces, tabs, newlines) into a single space
+  let t = String(text).replace(/\s+/g, " ").trim();
   if (!t) return "";
   const last = t[t.length - 1];
   if (!".!?".includes(last)) t += ".";
   return t;
 }
-
 function buildNote(global, typeConfig, specific) {
   const dateStr = global.noteDate || new Date().toLocaleDateString();
   const timeStr = global.noteTime ? ` at ${global.noteTime}` : "";
