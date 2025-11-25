@@ -40,24 +40,24 @@
     const NOTE_TYPES = [
       {
         id: "intake",
-        label: "Intake / Orientation",
-        description: "First contact, eligibility discussion, overview of WIOA Youth services.",
+        label: "Eligibility",
+        description: "First contact, eligibility discussion, overview of WIOA Youth services, justification",
         fields: [
-          { key: "primaryReason", label: "Primary reason for visit / contact", type: "textarea" },
-          { key: "eligibilityDiscussed", label: "Eligibility factors discussed (in-school / out-of-school, barriers, income, etc.)", type: "textarea" },
-          { key: "documentsCollected", label: "Documents collected (ID, SSN, income, school status, selective service, etc.)", type: "textarea" },
-          { key: "topicsCovered", label: "Topics covered in orientation (rights, responsibilities, services, expectations)", type: "textarea" },
-          { key: "participantEngagement", label: "Participant engagement / motivation level", type: "text" },
+          { key: "primaryReason", label: "Primary reason for visit / contact", type: "textarea", placeholder: "Client came to HWS for assistance paying for his CDL"  },
+          { key: "eligibilityDiscussed", label: "Eligibility factors discussed (in-school / out-of-school, barriers, etc.)", type: "textarea", placeholder: "Client is OSY with barriers of justice involvement and aged out of fostercare" },
+          { key: "documentsCollected", label: "Documents collected (ID, SSN, income, school status, selective service, etc.)", type: "textarea", placeholder: "Go through the papers that was signed" },
+          { key: "topicsCovered", label: "Topics covered in orientation (rights, responsibilities, services, expectations)", type: "textarea", placeholder: "What was discussed duirng the appointment and what services were proposed" },
+          { key: "participantEngagement", label: "Participant engagement / motivation level", type: "text" placeholder: "what were the next steps discussed" },
           { key: "nextSteps", label: "Next steps agreed upon (appointments, forms, assessments)", type: "textarea" },
         ],
       },
        {
         id: "itajustification",
         label: "ITA Justification",
-        description: "ETPL, NCRC silver scores, ONET alignment.",
+        description: "Justify Enrollment into an Approved Training Program",
         fields: [
           { key: "primaryReason", label: "ITA match ONET, Job prospects, expected earnings, job growth, H3 career check", type: "textarea" },
-          { key: "eligibilityDiscussed", label: "ITA on ETPL, details of program, duration, aligns with goals etc.)", type: "textarea" },
+          { key: "eligibilityDiscussed", label: "ITA on ETPL, details of program, duration, aligns with goals etc.", type: "textarea" },
           { key: "documentsCollected", label: "Requirements for the ITA, enrollment agreement", type: "textarea" },
           { key: "topicsCovered", label: "Training identified on ISS, possible barriers, what will participant receive end of training", type: "textarea" },
           { key: "expectedoutcomes", label: "Job after Training", type: "text" },
